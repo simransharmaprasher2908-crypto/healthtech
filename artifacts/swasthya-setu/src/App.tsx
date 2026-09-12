@@ -5,6 +5,7 @@ import {
   Ambulance,
   ArrowRight,
   Bot,
+  CalendarDays,
   CheckCircle2,
   Clock3,
   Cross,
@@ -35,6 +36,15 @@ const queryClient = new QueryClient();
 
 type Language = 'hi' | 'en' | 'mr' | 'bn' | 'te' | 'ta';
 type Section = 'home' | 'search' | 'hospitals' | 'doctors' | 'profile';
+
+type AppointmentConfirmation = {
+  id: string;
+  doctor: string;
+  facility: string;
+  date: string;
+  time: string;
+  demo: boolean;
+};
 
 type Copy = {
   brand: string;
@@ -643,6 +653,144 @@ const doctors = [
   { id: 'd6', name: 'Dr. Raghav Rao', specialty: 'Cardiologist', city: 'Hyderabad, Telangana', distance: '7.1 km', status: 'closed' },
 ];
 
+const appointmentSchedules: Record<string, { days: string; slots: string[] }> = {
+  d1: { days: 'Monday, Wednesday, Friday', slots: ['09:00 AM', '10:30 AM', '02:00 PM', '04:30 PM'] },
+  d2: { days: 'Tuesday, Thursday, Saturday', slots: ['09:30 AM', '11:00 AM', '03:00 PM', '05:30 PM'] },
+  d3: { days: 'Monday to Friday', slots: ['10:00 AM', '12:00 PM', '03:30 PM'] },
+  d4: { days: 'Monday, Wednesday, Saturday', slots: ['09:00 AM', '11:30 AM', '04:00 PM'] },
+  d5: { days: 'Tuesday, Thursday, Friday', slots: ['10:30 AM', '01:00 PM', '03:30 PM'] },
+  d6: { days: 'Monday, Thursday', slots: ['09:00 AM', '01:30 PM', '05:00 PM'] },
+};
+
+const getLocalDate = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+};
+
+function AppointmentBooking({ onNavigate }: { onNavigate: (section: Section) => void }) {
+  const [facilityId, setFacilityId] = useState(hospitals[0].id);
+  const [doctorId, setDoctorId] = useState(doctors[0].id);
+  const [appointmentDate, setAppointmentDate] = useState(getLocalDate);
+  const [appointmentTime, setAppointmentTime] = useState(appointmentSchedules[doctors[0].id].slots[0]);
+  const [patientName, setPatientName] = useState('');
+  const [reason, setReason] = useState('');
+  const [booking, setBooking] = useState(false);
+  const [error, setError] = useState('');
+  const [confirmation, setConfirmation] = useState<AppointmentConfirmation | null>(null);
+
+  const selectedDoctor = doctors.find((doctor) => doctor.id === doctorId) ?? doctors[0];
+  const selectedFacility = hospitals.find((facility) => facility.id === facilityId) ?? hospitals[0];
+  const schedule = appointmentSchedules[selectedDoctor.id];
+
+  const handleDoctorChange = (nextDoctorId: string) => {
+    setDoctorId(nextDoctorId);
+    setAppointmentTime(appointmentSchedules[nextDoctorId].slots[0]);
+    const doctor = doctors.find((item) => item.id === nextDoctorId);
+    const facility = hospitals.find((item) => item.city === doctor?.city);
+    if (facility) setFacilityId(facility.id);
+    setError('');
+  };
+
+  const handleBooking = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    setConfirmation(null);
+    if (!patientName.trim()) {
+      setError('Please enter the patient name.');
+      return;
+    }
+
+    setBooking(true);
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const patientId = localStorage.getItem('patient_id') || sessionStorage.getItem('patient_id');
+    const canUseApi = Boolean(token && patientId && /^\d+$/.test(patientId));
+
+    try {
+      if (canUseApi) {
+        const response = await fetch('http://localhost:5000/api/appointments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            patient_id: Number(patientId),
+            doctor_id: Number(doctorId.replace(/\D/g, '')),
+            facility_id: Number(facilityId.replace(/\D/g, '')),
+            appointment_date: appointmentDate,
+            appointment_time: appointmentTime,
+            reason: reason.trim() || null,
+          }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.message || 'Unable to book this appointment.');
+        setConfirmation({ id: String(payload.appointment.id), doctor: selectedDoctor.name, facility: selectedFacility.name, date: appointmentDate, time: appointmentTime, demo: false });
+      } else {
+        await new Promise((resolve) => window.setTimeout(resolve, 500));
+        setConfirmation({ id: `DEMO-${Date.now().toString().slice(-6)}`, doctor: selectedDoctor.name, facility: selectedFacility.name, date: appointmentDate, time: appointmentTime, demo: true });
+      }
+    } catch (bookingError) {
+      setError(bookingError instanceof Error ? bookingError.message : 'Unable to book this appointment.');
+    } finally {
+      setBooking(false);
+    }
+  };
+
+  return (
+    <section className="ss-appointment-section" aria-labelledby="appointment-title">
+      <div className="ss-section-header">
+        <div>
+          <p className="ss-page-kicker">Care when you need it</p>
+          <h2 id="appointment-title" className="ss-section-title">Book an Appointment</h2>
+        </div>
+        <button type="button" className="ss-button ss-button-outline ss-button-small" onClick={() => onNavigate('profile')}>My Appointments</button>
+      </div>
+      <div className="ss-appointment-card">
+        <form className="ss-appointment-form" onSubmit={handleBooking}>
+          <div className="ss-appointment-profile">
+            <span className="ss-appointment-avatar"><UserRound size={24} aria-hidden="true" /></span>
+            <div>
+              <span className="ss-appointment-label">Doctor</span>
+              <strong>{selectedDoctor.name}</strong>
+              <span>{selectedDoctor.specialty}</span>
+              <small>Available: {schedule.days}</small>
+            </div>
+          </div>
+          <label className="ss-appointment-field">Facility
+            <select value={facilityId} onChange={(event) => setFacilityId(event.target.value)}>
+              {hospitals.map((facility) => <option key={facility.id} value={facility.id}>{facility.name}</option>)}
+            </select>
+          </label>
+          <label className="ss-appointment-field">Doctor
+            <select value={doctorId} onChange={(event) => handleDoctorChange(event.target.value)}>
+              {doctors.filter((doctor) => doctor.status === 'open').map((doctor) => <option key={doctor.id} value={doctor.id}>{doctor.name} - {doctor.specialty}</option>)}
+            </select>
+          </label>
+          <label className="ss-appointment-field">Patient name
+            <input value={patientName} onChange={(event) => setPatientName(event.target.value)} placeholder="Enter patient name" required />
+          </label>
+          <label className="ss-appointment-field">Appointment date
+            <span className="ss-date-input"><CalendarDays size={17} aria-hidden="true" /><input type="date" min={getLocalDate()} value={appointmentDate} onChange={(event) => setAppointmentDate(event.target.value)} required /></span>
+          </label>
+          <div className="ss-appointment-field ss-time-field"><span>Available time slots</span>
+            <div className="ss-time-slots">{schedule.slots.map((slot) => <button key={slot} type="button" className="ss-time-slot" data-selected={appointmentTime === slot} onClick={() => setAppointmentTime(slot)}>{slot}</button>)}</div>
+          </div>
+          <label className="ss-appointment-field ss-reason-field">Reason (optional)
+            <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Add a short reason for the visit" />
+          </label>
+          {error && <p className="ss-appointment-error" role="alert">{error}</p>}
+          <button type="submit" className="ss-button ss-button-primary ss-book-button" disabled={booking}>{booking ? <><LoaderCircle size={17} className="ss-spin" aria-hidden="true" /> Booking...</> : <><CalendarDays size={17} aria-hidden="true" /> Book Appointment</>}</button>
+        </form>
+        {confirmation && <div className="ss-appointment-success" role="status">
+          <CheckCircle2 size={22} aria-hidden="true" />
+          <div><strong>Appointment booked successfully</strong>{confirmation.demo && <span className="ss-demo-note">Demo appointment - connect your patient account to save it to the backend.</span>}
+            <dl><div><dt>Appointment ID</dt><dd>{confirmation.id}</dd></div><div><dt>Doctor</dt><dd>{confirmation.doctor}</dd></div><div><dt>Facility</dt><dd>{confirmation.facility}</dd></div><div><dt>Date and time</dt><dd>{confirmation.date} at {confirmation.time}</dd></div></dl>
+            <button type="button" className="ss-button ss-button-outline ss-button-small" onClick={() => onNavigate('profile')}>View Appointment</button>
+          </div>
+        </div>}
+      </div>
+    </section>
+  );
+}
+
 const navItems: Array<{ id: Section; icon: typeof HeartPulse; copyKey: keyof Copy }> = [
   { id: 'home', icon: HeartPulse, copyKey: 'home' },
   { id: 'search', icon: Search, copyKey: 'search' },
@@ -746,6 +894,7 @@ function HomePage({ content, onNavigate, onEmergency }: { content: Copy; onNavig
           </div>
         </div>
       </section>
+      <AppointmentBooking onNavigate={onNavigate} />
       <section className="ss-section" aria-labelledby="quick-services-title">
         <div className="ss-section-header">
           <h2 id="quick-services-title" className="ss-section-title">{content.quickServices}</h2>
