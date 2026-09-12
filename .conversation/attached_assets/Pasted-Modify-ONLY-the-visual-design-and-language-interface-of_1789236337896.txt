@@ -1,0 +1,91 @@
+Modify ONLY the visual design and language interface of my existing Swasthya Setu project.
+
+Do not change, remove, or add core functionality.
+
+### DESIGN
+
+Make it look like a simple, trustworthy Indian public-service website.
+
+Use this colour palette:
+
+* Blue: #005A9C
+* Dark blue: #003B5C
+* Green: #138808
+* Red: #D32F2F
+* White: #FFFFFF
+* Light grey: #F5F7FA
+* Dark text: #222222
+* Border: #D9DEE3
+
+Use a clean white background, blue header, green accents, simple cards, thin borders, readable typography and large buttons.
+
+The design should feel:
+
+* official
+* trustworthy
+* simple
+* accessible
+* Indian public-service style
+
+Avoid:
+
+* gradients
+* neon colours
+* purple/pink themes
+* glassmorphism
+* 3D graphics
+* cartoon graphics
+* futuristic styling
+* excessive animations
+* complicated dashboards
+
+### SIMPLE USER INTERFACE
+
+Make the interface extremely easy to understand.
+
+Use large touch-friendly buttons, clear icons, short labels and good spacing.
+
+Keep the existing Home, Search, Hospitals, Doctors and Profile sections.
+
+Keep the existing prominent red Emergency button, but only change its visual appearance.
+
+### LANGUAGES
+
+Add a language selector containing exactly:
+
+हिन्दी
+English
+मराठी
+বাংলা
+తెలుగు
+தமிழ்
+
+Marathi is especially important.
+
+Make Marathi a complete interface language, not just a dropdown option. Translate the visible navigation, buttons, headings and basic interface text into Marathi.
+
+Also provide complete interface translations for the other five languages.
+
+Display each language in its native script.
+
+### MOBILE
+
+Make the interface mobile-first.
+
+Use simple bottom navigation:
+
+Home | Search | Hospitals | Doctors | Profile
+
+Make buttons and text large enough for comfortable phone use.
+
+### IMPORTANT
+
+This is a UI redesign only.
+
+Preserve the existing Swasthya Setu features and data.
+
+Do not introduce new services or external integrations.
+
+Do not redesign the project into a futuristic or commercial healthcare startup.
+
+Make the final result look like a clean Indian government/public-service website.

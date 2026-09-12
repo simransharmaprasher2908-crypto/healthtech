@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Swasthya Setu"
+description = "A mobile-first public-service healthcare frontend for finding care, hospitals, doctors, and emergency help in six Indian languages."
+version = "1.0.0"
+id = "artifacts/swasthya-setu"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21374
+
+[services.development]
+run = "pnpm --filter @workspace/swasthya-setu run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/swasthya-setu", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/swasthya-setu/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21374"
+BASE_PATH = "/"
